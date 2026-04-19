@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Wishlist ❤️</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: linear-gradient(135deg,#eef2f3,#dfe9f3);
+}
+
+/* NAVBAR */
+.navbar {
+    background:#131921;
+    color:white;
+    padding:15px;
+    display:flex;
+    justify-content:space-between;
+}
+
+.nav-links a {
+    color:white;
+    margin-left:15px;
+    text-decoration:none;
+}
+
+/* GRID */
+.container {
+    display:grid;
+    grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
+    gap:20px;
+    padding:20px;
+}
+
+/* CARD */
+.card {
+    background:white;
+    border-radius:12px;
+    padding:15px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    text-align:center;
+    transition:0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* IMAGE */
+.card img {
+    width:100%;
+    height:180px;
+    object-fit:contain;
+}
+
+/* PRICE */
+.price {
+    color:green;
+    font-weight:bold;
+}
+
+/* BUTTONS */
+button {
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+    border:none;
+    cursor:pointer;
+    border-radius:6px;
+}
+
+.cart-btn { background:orange; }
+.remove-btn { background:red; color:white; }
+
+/* EMPTY */
+.empty {
+    text-align:center;
+    margin-top:50px;
+    color:gray;
+    font-size:18px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+    <h2>❤️ Wishlist</h2>
+    <div class="nav-links">
+        <a href="/products.html">Home</a>
+        <a href="/cart.html">Cart 🛒 (<span id="cartCount">0</span>)</a>
+        <a href="/orders.html">Orders 📦</a>
+        <a href="/logout">Logout 🚪</a>
+    </div>
+</div>
+
+<!-- LIST -->
+<div class="container" id="list"></div>
+
+<script>
+
+const token = localStorage.getItem("token");
+
+/* LOAD WISHLIST */
+async function load(){
+    const res = await fetch("/api/wishlist",{
+        headers:{ Authorization: token }
+    });
+
+    const data = await res.json();
+
+    const div = document.getElementById("list");
+
+    if(!data.length){
+        div.innerHTML = "<p class='empty'>❤️ No items in wishlist</p>";
+        return;
+    }
+
+    let html = "";
+
+    data.forEach(p=>{
+        html += `
+        <div class="card">
+
+            <img src="/uploads/${p.image}">
+
+            <h3>${p.name}</h3>
+
+            <p class="price">₹${p.price}</p>
+
+            <button class="cart-btn"
+                onclick="addToCart('${p.productId}','${p.name}',${p.price},'${p.image}')">
+                Add to Cart
+            </button>
+
+            <button class="remove-btn"
+                onclick="removeItem('${p.productId}')">
+                Remove
+            </button>
+
+        </div>
+        `;
+    });
+
+    div.innerHTML = html;
+
+    loadCounts();
+}
+
+/* ADD TO CART */
+async function addToCart(id,name,price,image){
+    await fetch("/api/add-to-cart",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": token
+        },
+        body: JSON.stringify({
+            productId:id,
+            name,
+            price,
+            image
+        })
+    });
+
+    alert("Added to cart 🛒");
+    loadCounts();
+}
+
+/* REMOVE FROM WISHLIST */
+async function removeItem(id){
+    await fetch("/api/remove-wishlist",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": token
+        },
+        body: JSON.stringify({ productId:id })
+    });
+
+    load();
+}
+
+/* COUNTS */
+async function loadCounts(){
+    try{
+        const c = await fetch("/api/cart-count",{ headers:{ Authorization: token }});
+        const cd = await c.json();
+
+        document.getElementById("cartCount").innerText = cd.count || 0;
+
+    }catch{
+        document.getElementById("cartCount").innerText = 0;
+    }
+}
+
+load();
+
+</script>
+
+</body>
+</html>

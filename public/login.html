@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login | Elite Store</title>
+
+<style>
+body{
+    margin:0;
+    font-family:'Segoe UI', sans-serif;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background: linear-gradient(135deg,#1e3c72,#2a5298);
+}
+
+/* CARD */
+.login-box{
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(15px);
+    padding:30px;
+    border-radius:12px;
+    width:320px;
+    text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,0.3);
+    color:white;
+}
+
+.login-box h2{
+    margin-bottom:20px;
+}
+
+/* INPUT */
+input{
+    width:100%;
+    padding:12px;
+    margin:10px 0;
+    border:none;
+    border-radius:6px;
+    outline:none;
+}
+
+/* BUTTON */
+button{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:6px;
+    background:#ff9900;
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#e68a00;
+}
+
+/* LINK */
+.link{
+    margin-top:10px;
+    display:block;
+    color:#ddd;
+    text-decoration:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="login-box">
+    <h2>🔐 Login</h2>
+
+    <input type="email" id="email" placeholder="Enter Email">
+    <input type="password" id="password" placeholder="Enter Password">
+
+    <button onclick="login()">Login</button>
+
+    <a href="/register.html" class="link">Create account</a>
+</div>
+
+<script>
+
+async function login(){
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if(!email || !password){
+        alert("Enter all fields");
+        return;
+    }
+
+    const res = await fetch("/login",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify({email,password})
+    });
+
+    const data = await res.json();
+
+    if(data.token){
+        localStorage.setItem("token", data.token); // ✅ IMPORTANT
+        alert("Login successful ✅");
+
+        location.href="/products.html"; // redirect
+    }else{
+        alert(data.message || "Login failed ❌");
+    }
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Elite Store</title>
+
+<style>
+body {
+    margin:0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#1e3c72,#2a5298);
+}
+
+/* NAVBAR */
+.navbar {
+    backdrop-filter: blur(10px);
+    background: rgba(0,0,0,0.6);
+    color:white;
+    padding:15px 30px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.logo {
+    font-size:22px;
+    font-weight:bold;
+}
+
+.nav-links a {
+    color:white;
+    margin-left:20px;
+    text-decoration:none;
+    position:relative;
+}
+
+.badge {
+    background:red;
+    border-radius:50%;
+    padding:2px 6px;
+    font-size:12px;
+    position:absolute;
+    top:-8px;
+    right:-12px;
+}
+
+/* SEARCH */
+.search-box {
+    padding:20px;
+    text-align:center;
+}
+
+.search-box input {
+    width:60%;
+    padding:12px;
+    border-radius:30px;
+    border:none;
+    outline:none;
+    font-size:16px;
+}
+
+/* PRODUCTS */
+#products {
+    padding:20px;
+}
+
+.product-box {
+    display:flex;
+    background:white;
+    margin:15px auto;
+    padding:15px;
+    border-radius:12px;
+    width:85%;
+    transition:0.3s;
+    cursor:pointer;
+}
+
+.product-box:hover {
+    transform:scale(1.02);
+    box-shadow:0 10px 25px rgba(0,0,0,0.2);
+}
+
+/* IMAGE */
+.product-image img {
+    width:180px;
+    height:150px;
+    object-fit:contain;
+}
+
+/* DETAILS */
+.product-details {
+    margin-left:20px;
+}
+
+.product-details h3 {
+    margin:0;
+}
+
+.price {
+    color:green;
+    font-size:20px;
+    font-weight:bold;
+}
+
+.rating {
+    color:orange;
+}
+
+/* BUTTONS */
+.actions {
+    margin-top:10px;
+}
+
+.actions button {
+    padding:8px 15px;
+    border:none;
+    margin-right:10px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.cart-btn, .buy-btn {
+    background: #FFD700 !important;   /* GOLD YELLOW */
+    color: black !important;
+    font-weight: bold;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.wish-btn {
+    background: #c0b3b5 !important;
+    color: rgb(47, 35, 3);
+}
+.cart-btn:hover, .buy-btn:hover {
+    background: #ffcc00 !important;
+    transform: scale(1.05);
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+    <div class="logo">🛒 Elite Store</div>
+
+    <div class="nav-links">
+        <a href="/cart.html">Cart 🛒 <span id="cartCount" class="badge">0</span></a>
+        <a href="/orders.html">Orders 📦</a>
+        <a href="/wishlist.html">Wishlist ❤️ <span id="wishCount" class="badge">0</span></a>
+        <a href="#" onclick="logout()">Logout 🚪</a>
+    </div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-box">
+    <input type="text" id="search" placeholder="Search products..." onkeyup="searchProducts()">
+</div>
+
+<!-- PRODUCTS -->
+<div id="products"></div>
+
+<script>
+
+let allProducts=[];
+const token = localStorage.getItem("token");
+
+// LOAD PRODUCTS
+async function loadProducts(){
+    const res = await fetch("/api/products");
+    const data = await res.json();
+    allProducts=data;
+    showProducts(data);
+}
+
+// SHOW PRODUCTS
+function showProducts(products){
+    const div=document.getElementById("products");
+    div.innerHTML="";
+
+    products.forEach(p=>{
+
+        let avg = "No rating";
+
+        if(p.reviews && p.reviews.length>0){
+            let total=0;
+            p.reviews.forEach(r=> total += Number(r.rating));
+            avg = (total / p.reviews.length).toFixed(1);
+        }
+
+        div.innerHTML += `
+<div class="product-box" onclick="openProduct('${p._id}')">
+    <div class="product-image">
+        <img src="/uploads/${p.image}">
+    </div>
+
+    <div class="product-details">
+        <h3>${p.name}</h3>
+        <p>${p.description || ""}</p>
+
+        <p class="price">₹${p.price}</p>
+
+        <div class="actions">
+            <button onclick="event.stopPropagation(); addToCart('${p._id}','${p.name}',${p.price},'${p.image}')">
+                Add to Cart
+            </button>
+
+            <button onclick="event.stopPropagation(); buyNow('${p._id}')">
+                Buy Now
+            </button>
+
+            <button onclick="event.stopPropagation(); addWishlist('${p._id}')">
+                ❤️
+            </button>
+        </div>
+    </div>
+
+</div>
+`;
+    });
+}
+
+// SEARCH
+function searchProducts(){
+    const val=document.getElementById("search").value.toLowerCase();
+
+    const filtered=allProducts.filter(p=>
+        p.name.toLowerCase().includes(val) ||
+        (p.description||"").toLowerCase().includes(val)
+    );
+
+    showProducts(filtered);
+}
+
+// NAVIGATION
+function openProduct(id){
+    location.href="/product.html?id="+id;
+}
+
+// 🔥 ADD TO CART (FIXED)
+async function addToCart(id,name,price,image){
+
+    if(!token){
+        alert("Please login first");
+        return;
+    }
+
+    await fetch("/api/add-to-cart",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": token
+        },
+        body:JSON.stringify({
+            productId:id,
+            name:name,
+            price:price,
+            image:image
+        })
+    });
+
+    alert("Added to cart ✅");
+    loadCounts();
+}
+
+// 🔥 BUY NOW
+async function buyNow(id,name,price,image){
+    await addToCart(id,name,price,image);
+    location.href="/checkout.html";
+}
+
+// 🔥 WISHLIST FIX
+async function addWishlist(id,name,price,image){
+
+    if(!token){
+        alert("Please login first");
+        return;
+    }
+
+    await fetch("/api/wishlist",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": token
+        },
+        body:JSON.stringify({
+            productId:id,
+            name:name,
+            price:price,
+            image:image
+        })
+    });
+
+    alert("Added to wishlist ❤️");
+    loadCounts();
+}
+
+// 🔥 COUNTS FIX
+async function loadCounts(){
+
+    if(!token){
+        document.getElementById("cartCount").innerText = 0;
+        document.getElementById("wishCount").innerText = 0;
+        return;
+    }
+
+    try{
+        const c = await fetch("/api/cart-count",{
+            headers:{Authorization: token}
+        });
+        const cd = await c.json();
+
+        const w = await fetch("/api/wishlist-count",{
+            headers:{Authorization: token}
+        });
+        const wd = await w.json();
+
+        document.getElementById("cartCount").innerText = cd.count || 0;
+        document.getElementById("wishCount").innerText = wd.count || 0;
+
+    }catch{
+        document.getElementById("cartCount").innerText = 0;
+        document.getElementById("wishCount").innerText = 0;
+    }
+}
+function logout(){
+    localStorage.removeItem("token");
+    alert("Logged out successfully ✅");
+    location.href = "/login.html";
+}
+
+// INIT
+loadProducts();
+loadCounts();
+
+</script>
+
+</body>
+</html>

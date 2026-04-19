@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Admin Panel</h2>
+
+<form action="/admin/add-product" method="POST" enctype="multipart/form-data">
+    <input name="name" placeholder="Name"><br>
+    <input name="price" placeholder="Price"><br>
+    <input name="description" placeholder="Description"><br>
+    <input type="file" name="image"><br>
+    <button>Add</button>
+</form>
+
+<h3>Products</h3>
+<div id="products"></div>
+
+<script>
+async function load(){
+    const res=await fetch("/api/products");
+    const data=await res.json();
+
+    const div=document.getElementById("products");
+    div.innerHTML="";
+
+    data.forEach(p=>{
+        div.innerHTML+=`
+        <div>
+            ${p.name}
+            <button onclick="del('${p._id}')">Delete</button>
+        </div>`;
+    });
+}
+
+async function del(id){
+    await fetch("/admin/delete-product",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({id})
+    });
+
+    load();
+}
+
+load();
+</script>
+
+</body>
+</html>
+
+
+
+
+

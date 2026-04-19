@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>My Orders</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Segoe UI;
+    background:linear-gradient(135deg,#1e3c72,#2a5298);
+}
+
+/* NAVBAR */
+.navbar{
+    background:rgba(0,0,0,0.6);
+    color:white;
+    padding:15px 30px;
+    display:flex;
+    justify-content:space-between;
+}
+
+.navbar a{
+    color:white;
+    text-decoration:none;
+    margin-left:15px;
+}
+
+/* CONTAINER */
+.container{
+    padding:20px;
+}
+
+/* ORDER CARD */
+.order{
+    background:white;
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* STATUS */
+.status{
+    font-weight:bold;
+    padding:5px 10px;
+    border-radius:6px;
+    display:inline-block;
+}
+
+.placed{ background:orange; color:white; }
+.shipped{ background:#3498db; color:white; }
+.delivered{ background:green; color:white; }
+
+/* PRODUCT */
+.product{
+    display:flex;
+    align-items:center;
+    margin-top:15px;
+    border-top:1px solid #eee;
+    padding-top:15px;
+}
+
+.product img{
+    width:80px;
+    height:80px;
+    object-fit:contain;
+}
+
+.product-details{
+    margin-left:15px;
+}
+
+/* BUTTON */
+.cancel-btn{
+    margin-top:10px;
+    background:red;
+    color:white;
+    border:none;
+    padding:8px 12px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+    <h2>📦 My Orders</h2>
+    <div>
+        <a href="/products.html">Home</a>
+        <a href="/cart.html">Cart</a>
+        <a href="/logout.html">Logout</a>
+    </div>
+</div>
+
+<div class="container" id="orders"></div>
+
+<script>
+
+const token = localStorage.getItem("token");
+
+// LOAD ORDERS
+async function loadOrders(){
+
+    const res = await fetch("/api/orders",{
+        headers:{ Authorization: token }
+    });
+
+    const data = await res.json();
+
+    let html="";
+
+    if(!data || data.length === 0){
+        html="<h2 style='color:white'>No Orders Found</h2>";
+    }
+
+    data.forEach(order=>{
+
+        let statusClass="placed";
+        if(order.status === "Shipped") statusClass="shipped";
+        if(order.status === "Delivered") statusClass="delivered";
+
+        html += `
+<div class="order">
+
+    <h3>Order ID: ${order._id}</h3>
+    <p>Date: ${new Date(order.date).toLocaleString()}</p>
+`;
+
+        // PRODUCTS INSIDE ORDER
+        order.items.forEach(item=>{
+            html += `
+            <div class="product" onclick="openProductPage('${item.productid}')" style="cursor:pointer">
+    
+    <img src="/uploads/${item.image}" onerror="this.src='https://via.placeholder.com/80'">
+
+    <div class="product-details">
+        <h4>${item.name}</h4>
+        <p>₹${item.price}</p>
+        <p>Qty: ${item.quantity}</p>
+    </div>
+
+</div>
+            `;
+        });
+
+        html += `<h3>Total: ₹${order.total}</h3>`;
+
+        // CANCEL BUTTON (only if not delivered)
+        if(order.status !== "Delivered"){
+            html += `
+            <button onclick="cancelOrder('${order._id}')">
+    Cancel Order ❌
+</button>
+            `;
+        }
+
+        html += `</div>`;
+    });
+
+    document.getElementById("orders").innerHTML = html;
+}
+
+
+// CANCEL ORDER
+async function cancelOrder(id){
+
+    const res = await fetch("/api/cancel-order",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": localStorage.getItem("token")
+        },
+        body: JSON.stringify({
+            orderId: id   // ✅ IMPORTANT
+        })
+    });
+
+    const data = await res.json();
+
+    alert(data.message || "Order Cancelled");
+
+    loadOrders(); // refresh
+}
+function openProductPage(id){
+    // go to product page using id
+    location.href = "/product.html?id=" + encodeURIComponent(id);
+}
+
+// INIT
+loadOrders();
+
+</script>
+
+</body>
+</html>

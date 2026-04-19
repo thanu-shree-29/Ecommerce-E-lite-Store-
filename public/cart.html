@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Cart</title>
+
+<style>
+body{
+    margin:0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#51acb6,#01222c);
+    color:white;
+}
+
+/* NAVBAR */
+.navbar{
+    display:flex;
+    justify-content:space-between;
+    padding:15px 30px;
+    background:rgba(0,0,0,0.6);
+}
+
+.nav-links a{
+    color:white;
+    margin-left:15px;
+    text-decoration:none;
+}
+
+/* LAYOUT */
+.container{
+    display:flex;
+    gap:20px;
+    padding:20px;
+}
+
+/* CART ITEMS */
+.cart-items{
+    flex:2;
+}
+
+/* CARD */
+.item{
+    background:white;
+    color:black;
+    padding:15px;
+    margin-bottom:15px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:0 5px 15px rgba(0,0,0,0.2);
+}
+
+.item img{
+    width:100px;
+    height:100px;
+    object-fit:contain;
+}
+
+.item-details{
+    flex:1;
+    margin-left:15px;
+}
+
+.qty-btn{
+    padding:5px 10px;
+    margin:5px;
+    border:none;
+    cursor:pointer;
+}
+
+.remove-btn{
+    background:red;
+    color:white;
+    padding:5px 10px;
+    border:none;
+    border-radius:5px;
+}
+
+/* SUMMARY */
+.summary{
+    flex:1;
+    background:white;
+    color:black;
+    padding:20px;
+    border-radius:10px;
+    height:fit-content;
+    box-shadow:0 5px 20px rgba(0,0,0,0.3);
+}
+
+.checkout-btn{
+    width:100%;
+    padding:12px;
+    background:#ff9900;
+    border:none;
+    color:white;
+    font-size:16px;
+    border-radius:6px;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+    <h2>🛒 Elite Store</h2>
+    <div class="nav-links">
+        <a href="/products.html">Home</a>
+        <a href="/orders.html">Orders</a>
+        <a href="/wishlist.html">Wishlist</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- CART -->
+    <div class="cart-items" id="cart"></div>
+
+    <!-- SUMMARY -->
+    <div class="summary">
+        <h2>Order Summary</h2>
+        <p>Total: ₹<span id="total">0</span></p>
+        <button onclick="goToCheckout()">Proceed to Payment 💳</button>
+    </div>
+
+</div>
+
+<script>
+
+const token = localStorage.getItem("token");
+
+// LOAD CART
+async function loadCart(){
+
+    if(!token){
+        document.getElementById("cart").innerHTML = "<h3>Please login first</h3>";
+        return;
+    }
+
+    const res = await fetch("/api/cart",{
+        headers:{ Authorization: token }
+    });
+
+    const data = await res.json();
+
+    let html = "";
+    let total = 0;
+
+    if(!data || data.length === 0){
+        html = "<h3 style='color:white'>Your cart is empty 🛒</h3>";
+    } else {
+
+        data.forEach(item=>{
+            total += item.price * item.quantity;
+
+            html += `
+            <div class="item">
+
+                <img src="/uploads/${item.image}">
+
+                <div class="item-details">
+                    <h3>${item.name}</h3>
+                    <p>₹${item.price}</p>
+
+                    <div>
+                        <button class="qty-btn" onclick="updateQty('${item.productId}',-1)">➖</button>
+                        <b>${item.quantity}</b>
+                        <button class="qty-btn" onclick="updateQty('${item.productId}',1)">➕</button>
+                    </div>
+
+                    <button class="remove-btn" onclick="removeItem('${item.productId}')">
+                        Remove ❌
+                    </button>
+                </div>
+
+            </div>
+            `;
+        });
+    }
+
+    document.getElementById("cart").innerHTML = html;
+    document.getElementById("total").innerText = total;
+}
+
+// UPDATE QTY
+async function updateQty(productId, change){
+
+    await fetch("/api/update-qty",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": token
+        },
+        body: JSON.stringify({
+            productId: productId,
+            change: change
+        })
+    });
+
+    loadCart();
+}
+
+// REMOVE ITEM
+async function removeItem(productId){
+
+    await fetch("/api/update-qty",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": token
+        },
+        body: JSON.stringify({
+            productId: productId,
+            change: -999
+        })
+    });
+
+    loadCart();
+}
+
+// BUY NOW
+async function buyNow(){
+
+    if(!token){
+        alert("Login first");
+        return;
+    }
+
+    const res = await fetch("/api/place-order",{
+        method:"POST",
+        headers:{ Authorization: token }
+    });
+
+    const data = await res.json();
+
+    alert(data.message);
+    loadCart();
+}
+function goToCheckout(){
+    location.href = "/checkout.html";
+}
+
+// INIT
+loadCart();
+
+</script>
+
+</body>
+</html>

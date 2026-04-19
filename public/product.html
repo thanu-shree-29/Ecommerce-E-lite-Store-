@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product</title>
+
+<style>
+body { font-family: Arial; margin:0; background:#f3f3f3; }
+
+.navbar {
+    background:#131921;
+    color:white;
+    padding:15px;
+    display:flex;
+    justify-content:space-between;
+}
+
+.nav-links a { color:white; margin-left:15px; text-decoration:none; }
+
+.container {
+    display:flex;
+    background:white;
+    margin:20px;
+    padding:20px;
+}
+
+.image-box { width:40%; }
+.image-box img {
+    width:100%;
+    height:400px;
+    object-fit:contain;
+}
+
+.thumbs img {
+    width:60px;
+    margin:5px;
+    cursor:pointer;
+}
+
+.details { width:35%; padding:0 20px; }
+
+.buy-box {
+    width:25%;
+    border:1px solid #ddd;
+    padding:15px;
+}
+
+button {
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    border:none;
+    cursor:pointer;
+}
+
+.cart-btn { background:orange; }
+.buy-btn { background:#ff9900; }
+.wish-btn { background:pink; }
+
+.review-box {
+    background:white;
+    margin:20px;
+    padding:15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+    <h2>🛒 Elite Store</h2>
+    <div class="nav-links">
+        <a href="/cart.html">Cart 🛒 (<span id="cartCount">0</span>)</a>
+        <a href="/orders.html">Orders 📦</a>
+        <a href="/wishlist.html">Wishlist ❤️ (<span id="wishCount">0</span>)</a>
+        <a href="/logout">Logout 🚪</a>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="image-box">
+        <img id="mainImg">
+        <div id="thumbs"></div>
+    </div>
+
+    <div class="details">
+        <h2 id="name"></h2>
+        <p id="desc"></p>
+        <h3 id="price"></h3>
+    </div>
+
+    <div class="buy-box">
+        <h2 id="price2"></h2>
+
+        <button class="cart-btn" onclick="addToCart()">Add to Cart</button>
+        <button class="buy-btn" onclick="buyNow()">Buy Now</button>
+        <button class="wish-btn" onclick="addWishlist()">❤️ Wishlist</button>
+    </div>
+
+</div>
+
+<div class="review-box">
+
+    <h3>⭐ Ratings & Reviews</h3>
+
+    <!-- AVG RATING -->
+    <h2 id="avgRating">No rating</h2>
+
+    <!-- REVIEWS LIST -->
+    <div id="reviews"></div>
+
+    <!-- ADD REVIEW -->
+    <h4>Add Review</h4>
+
+    <!-- STAR SELECT -->
+    <div id="starSelect">
+        <span onclick="setRating(1)">⭐</span>
+        <span onclick="setRating(2)">⭐</span>
+        <span onclick="setRating(3)">⭐</span>
+        <span onclick="setRating(4)">⭐</span>
+        <span onclick="setRating(5)">⭐</span>
+    </div>
+
+    <input id="comment" placeholder="Write comment">
+    <button onclick="addReview()">Submit Review</button>
+
+</div>
+
+<script>
+
+let product = {};
+let selectedRating = 0;
+
+const id = new URLSearchParams(location.search).get("id");
+
+/* LOAD PRODUCT */
+async function load(){
+    const res = await fetch("/api/products");
+    const data = await res.json();
+
+    product = data.find(p => p._id === id);
+
+    if(!product){
+        alert("Product not found");
+        return;
+    }
+
+    document.getElementById("mainImg").src = "/uploads/" + product.image;
+    document.getElementById("name").innerText = product.name;
+    document.getElementById("desc").innerText = product.description;
+    document.getElementById("price").innerText = "₹" + product.price;
+    document.getElementById("price2").innerText = "₹" + product.price;
+
+    let t = "";
+    (product.images || [product.image]).forEach(img=>{
+        t += `<img src="/uploads/${img}" onclick="changeImg('${img}')">`;
+    });
+    document.getElementById("thumbs").innerHTML = t;
+
+    /* REVIEWS */
+    let r = "";
+
+    if(product.reviews && product.reviews.length > 0){
+
+        let total = 0;
+
+        product.reviews.forEach(x=>{
+            total += Number(x.rating);
+            r += `<p>${"⭐".repeat(x.rating)} - ${x.comment}</p>`;
+        });
+
+        let avg = (total / product.reviews.length).toFixed(1);
+        document.getElementById("avgRating").innerText = `⭐ ${avg} / 5`;
+
+    } else {
+        r = "<p>No reviews yet</p>";
+        document.getElementById("avgRating").innerText = "No rating";
+    }
+
+    document.getElementById("reviews").innerHTML = r;
+}
+
+/* IMAGE */
+function changeImg(img){
+    document.getElementById("mainImg").src = "/uploads/" + img;
+}
+
+/* ⭐ SELECT RATING */
+function setRating(n){
+    selectedRating = n;
+    alert("Selected ⭐ " + n);
+}
+
+/* ADD TO CART (FIXED) */
+async function addToCart(){
+    await fetch("/api/add-to-cart", {
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": localStorage.getItem("token") // ✅ FIX
+        },
+        body: JSON.stringify({
+            productId: product._id,
+            name: product.name,
+            price: product.price,
+            image: product.image
+        })
+    });
+
+    alert("Added to cart ✅");
+    loadCounts();
+}
+
+/* BUY */
+async function buyNow(){
+    await addToCart();
+    location.href="/checkout.html";
+}
+
+/* WISHLIST (FIXED) */
+async function addWishlist(){
+    await fetch("/api/wishlist", {
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": localStorage.getItem("token") // ✅ FIX
+        },
+        body: JSON.stringify({
+            productId: product._id,
+            name: product.name,
+            price: product.price,
+            image: product.image
+        })
+    });
+
+    alert("Added to wishlist ❤️");
+    loadCounts();
+}
+
+/* REVIEW (FIXED) */
+async function addReview(){
+
+    if(selectedRating === 0){
+        alert("Select rating ⭐");
+        return;
+    }
+
+    const res = await fetch("/api/add-review",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": localStorage.getItem("token") // ✅ FIX
+        },
+        body: JSON.stringify({
+            productId:id,
+            rating:selectedRating,
+            comment:document.getElementById("comment").value
+        })
+    });
+
+    const data = await res.json();
+    alert(data.message);
+    load();
+}
+
+/* COUNTS (FIXED) */
+async function loadCounts(){
+    try{
+        const c = await fetch("/api/cart-count",{
+            headers:{ "Authorization": localStorage.getItem("token") }
+        });
+        const cd = await c.json();
+
+        const w = await fetch("/api/wishlist-count",{
+            headers:{ "Authorization": localStorage.getItem("token") }
+        });
+        const wd = await w.json();
+
+        document.getElementById("cartCount").innerText = cd.count || 0;
+        document.getElementById("wishCount").innerText = wd.count || 0;
+
+    }catch{
+        document.getElementById("cartCount").innerText = 0;
+        document.getElementById("wishCount").innerText = 0;
+    }
+}
+
+/* INIT */
+load();
+loadCounts();
+
+</script>
+
+</body>
+</html>

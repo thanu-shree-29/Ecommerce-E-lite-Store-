@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Cart</title>
+</head>
+
+<body>
+
+<h2>Your Cart 🛒</h2>
+<div id="cart"></div>
+
+<h3>Total: ₹<span id="total">0</span></h3>
+
+<button onclick="checkout()">Buy Now</button>
+
+<script>
+const token = localStorage.getItem("token");
+
+async function loadCart(){
+    const res = await fetch("/api/cart",{
+        headers:{ Authorization: token }
+    });
+
+    const data = await res.json();
+
+    let html="";
+    let total=0;
+
+    data.forEach(i=>{
+        total += i.price * i.quantity;
+
+        html += `
+        <div>
+            <img src="/uploads/${i.image}" width="100">
+            <h3>${i.name}</h3>
+            <p>₹${i.price}</p>
+
+            <button onclick="update('${i.name}',-1)">-</button>
+            ${i.quantity}
+            <button onclick="update('${i.name}',1)">+</button>
+        </div>
+        `;
+    });
+
+    document.getElementById("cart").innerHTML = html;
+    document.getElementById("total").innerText = total;
+}
+
+async function update(name,change){
+    await fetch("/api/update-qty",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            Authorization: token
+        },
+        body: JSON.stringify({name,change})
+    });
+
+    loadCart();
+}
+
+async function checkout(){
+    await fetch("/api/place-order",{
+        method:"POST",
+        headers:{ Authorization: token }
+    });
+
+    alert("Order placed");
+    loadCart();
+}
+
+loadCart();
+</script>
+
+</body>
+</html>

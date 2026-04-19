@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Payment</h2>
+<button onclick="pay()">Pay Now</button>
+
+<script>
+async function pay(){
+    await fetch("/api/checkout",{method:"POST",credentials:"same-origin"});
+    window.location.href="/success.html";
+}
+</script>
+
+</body>
+</html>
